@@ -1,0 +1,5 @@
+venv/
+firmware/*.zip
+firmware/*.bin
+__pycache__/
+.DS_Store

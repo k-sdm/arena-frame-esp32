@@ -1,0 +1,10 @@
+#!/bin/bash
+# Flash firmware to the frame board. Usage: ./flash [firmware.bin]
+# Runs esptool through python -m, since the venv path contains a space.
+HERE="$(cd "$(dirname "$0")" && pwd)"
+BIN="${1:-$HERE/firmware/firmware.bin}"
+PORT="${PORT:-$(ls /dev/cu.usbmodem* 2>/dev/null | grep -v 1234561 | head -1)}"
+[ -n "$PORT" ] || { echo "No board found. Plug in the UART port, or set PORT=..." >&2; exit 1; }
+[ -f "$BIN" ] || { echo "No firmware at $BIN" >&2; exit 1; }
+echo "Flashing $(basename "$BIN") to $PORT"
+exec "$HERE/venv/bin/python" -m esptool --chip esp32s3 --port "$PORT" --baud 460800 write_flash 0 "$BIN"

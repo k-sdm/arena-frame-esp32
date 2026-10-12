@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arena Frame Setup</title>
+<style>
+  /* Are.na's house style: white ground, 1px black rules, square corners,
+     small uppercase labels, buttons that invert on hover. */
+  :root {
+    --bg:#fff; --fg:#000; --line:#000; --muted:#6b6b6b; --faint:#e9e9e9;
+    --ok:#1a7f3c; --bad:#c0392b;
+    --sans:"Helvetica Neue",Helvetica,Arial,sans-serif;
+    --mono:"SFMono-Regular",Menlo,Monaco,Consolas,monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#000; --fg:#fff; --line:#fff; --muted:#9a9a9a; --faint:#1c1c1c;
+            --ok:#5fd18a; --bad:#ff7a6b; color-scheme: dark; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font-family:var(--sans);
+         font-size:14px; line-height:1.4; -webkit-font-smoothing:antialiased; }
+  .wrap { max-width:620px; margin:0 auto; padding:40px 20px 80px; }
+  header { border-bottom:1px solid var(--line); padding-bottom:12px; margin-bottom:0; }
+  h1 { font-size:15px; font-weight:700; margin:0; letter-spacing:.01em; }
+  p.lede { color:var(--muted); margin:4px 0 0; font-size:13px; }
+  .card { border:1px solid var(--line); border-top:0; padding:16px; }
+  label { display:block; font-size:10px; text-transform:uppercase; letter-spacing:.09em;
+          color:var(--muted); margin-bottom:5px; font-weight:400; }
+  input, select { width:100%; padding:8px 9px; border:1px solid var(--line); border-radius:0;
+          background:var(--bg); color:var(--fg); font:inherit; }
+  input:focus, select:focus { outline:2px solid var(--fg); outline-offset:-2px; }
+  .field { margin-bottom:14px; }
+  .field:last-child { margin-bottom:0; }
+  .row { display:flex; gap:14px; flex-wrap:wrap; }
+  .row > * { flex:1 1 180px; min-width:0; }
+  button { font:inherit; font-size:13px; padding:8px 14px; border:1px solid var(--line);
+           border-radius:0; background:var(--bg); color:var(--fg); cursor:pointer; }
+  button:hover:not(:disabled) { background:var(--fg); color:var(--bg); }
+  button:disabled { opacity:.35; cursor:not-allowed; }
+  .bar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .status { font-family:var(--mono); font-size:11px; text-transform:uppercase;
+            letter-spacing:.08em; color:var(--muted); }
+  .status.ok { color:var(--ok); } .status.bad { color:var(--bad); }
+  pre { background:var(--faint); border:0; padding:10px; font-family:var(--mono); font-size:11px;
+        max-height:200px; overflow:auto; margin:0; white-space:pre-wrap; color:var(--fg); }
+  .hint { font-size:12px; color:var(--muted); margin:10px 0 0; }
+  fieldset.toggles { border:1px solid var(--line); border-radius:0; padding:12px 14px; margin:0 0 14px; }
+  fieldset.toggles legend { font-size:10px; text-transform:uppercase; letter-spacing:.09em;
+                            color:var(--muted); padding:0 5px; }
+  label.check { display:flex; align-items:center; gap:9px; text-transform:none; letter-spacing:0;
+                font-size:13px; color:var(--fg); margin:0 0 7px; }
+  label.check:last-child { margin-bottom:0; }
+  label.check input { width:auto; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>ARENA FRAME / SETUP</h1>
+    <p class="lede">Settings over USB. Plug the frame into this computer, press Connect and choose its serial port.</p>
+  </header>
+
+  <div class="card">
+    <div class="bar">
+      <button id="connect">Connect</button>
+      <button id="load" class="ghost" disabled>Read from frame</button>
+      <span id="status" class="status">Not connected</span>
+    </div>
+    <p class="hint" id="unsupported" hidden>This browser has no Web Serial support. Use Chrome or Edge on desktop.</p>
+  </div>
+
+  <form class="card" id="form">
+    <div class="field">
+      <label for="ssid">WiFi network</label>
+      <input id="ssid" name="ssid" autocomplete="off" placeholder="network name">
+    </div>
+    <div class="field">
+      <label for="password">WiFi password</label>
+      <input id="password" name="password" type="password" autocomplete="off">
+    </div>
+    <div class="field">
+      <label for="channel">Are.na channel slug</label>
+      <input id="channel" name="channel" autocomplete="off" placeholder="my-channel">
+    </div>
+    <div class="row">
+      <div class="field">
+        <label for="order">Order</label>
+        <select id="order" name="order">
+          <option value="newest">Newest first</option>
+          <option value="oldest">Oldest first</option>
+          <option value="random">Random</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="refresh_minutes">Refresh (minutes)</label>
+        <input id="refresh_minutes" name="refresh_minutes" type="number" min="1" value="60">
+      </div>
+    </div>
+    <div class="field">
+      <label for="token">Access token (private channels only)</label>
+      <input id="token" name="token" type="password" autocomplete="off" placeholder="optional">
+    </div>
+    <fieldset class="toggles">
+      <legend>Display</legend>
+      <label class="check"><input type="checkbox" id="show_title"> Show block title</label>
+      <label class="check"><input type="checkbox" id="show_info"> Show channel name</label>
+      <label class="check"><input type="checkbox" id="dark_mode"> Dark mode</label>
+    </fieldset>
+    <div class="bar">
+      <button id="save" type="submit" disabled>Save to frame</button>
+      <button id="draw" type="button" class="ghost" disabled>Draw now</button>
+      <button id="reset" type="button" class="ghost" disabled>Reset board</button>
+    </div>
+  </form>
+
+  <div class="card">
+    <label>Log</label>
+    <pre id="log">Ready.</pre>
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const logEl = $("log"), statusEl = $("status");
+let port = null, reader = null, writer = null;
+
+function log(line) {
+  logEl.textContent = (logEl.textContent + "\n" + line).trim().split("\n").slice(-200).join("\n");
+  logEl.scrollTop = logEl.scrollHeight;
+}
+function status(text, kind) { statusEl.textContent = text; statusEl.className = "status" + (kind ? " " + kind : ""); }
+function setBusy(busy) { for (const id of ["save", "draw", "reset", "load"]) $(id).disabled = busy || !port; }
+
+if (!("serial" in navigator)) { $("unsupported").hidden = false; $("connect").disabled = true; }
+
+$("connect").addEventListener("click", async () => {
+  try {
+    port = await navigator.serial.requestPort();
+    await port.open({ baudRate: 115200 });
+    writer = port.writable.getWriter();
+    reader = port.readable.getReader();
+    status("Connected", "ok");
+    log("Serial port open at 115200.");
+    setBusy(false);
+    await loadConfig();
+  } catch (err) {
+    status("Connect failed", "bad");
+    log("Connect failed: " + err.message);
+  }
+});
+
+const enc = new TextEncoder(), dec = new TextDecoder();
+
+async function readUntil(marker, timeoutMs = 6000) {
+  let out = "";
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const { value, done } = await Promise.race([
+      reader.read(),
+      new Promise((res) => setTimeout(() => res({ value: undefined, done: false }), 300)),
+    ]);
+    if (done) break;
+    if (value) out += dec.decode(value);
+    if (out.includes(marker)) return out;
+  }
+  return out;
+}
+
+/* MicroPython raw REPL: ctrl-C interrupts, ctrl-A enters raw mode,
+   code then ctrl-D runs it, output ends with ctrl-D and a prompt. */
+async function runPython(code) {
+  await writer.write(enc.encode("\r\x03\x03"));
+  await readUntil(">>>", 1500);
+  await writer.write(enc.encode("\x01"));
+  await readUntil("raw REPL", 1500);
+  await writer.write(enc.encode(code + "\x04"));
+  const res = await readUntil("\x04>", 15000);
+  await writer.write(enc.encode("\x02"));          // back to the friendly REPL
+  const body = res.split("OK").slice(1).join("OK");
+  const [output = "", err = ""] = body.split("\x04");
+  if (err.trim()) throw new Error(err.trim().split("\n").pop());
+  return output.trim();
+}
+
+async function loadConfig() {
+  setBusy(true);
+  try {
+    const out = await runPython(
+      "try:\n import json;print(json.dumps(json.load(open('config.json'))))\nexcept Exception as e:\n print('{}')\n");
+    const cfg = JSON.parse(out.trim().split("\n").pop() || "{}");
+    for (const key of ["ssid", "channel", "order", "refresh_minutes"]) if (cfg[key] != null) $(key).value = cfg[key];
+    for (const key of ["show_title", "show_info", "dark_mode"]) $(key).checked = cfg[key] !== false;
+    log(cfg.ssid ? "Loaded settings from the frame." : "No settings on the frame yet.");
+    status("Connected", "ok");
+  } catch (err) {
+    log("Read failed: " + err.message);
+    status("Read failed", "bad");
+  }
+  setBusy(false);
+}
+
+$("load").addEventListener("click", loadConfig);
+
+$("form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  setBusy(true);
+  const cfg = {
+    ssid: $("ssid").value.trim(),
+    password: $("password").value,
+    channel: $("channel").value.trim(),
+    token: $("token").value.trim() || null,
+    order: $("order").value,
+    refresh_minutes: Number($("refresh_minutes").value) || 60,
+    show_title: $("show_title").checked,
+    show_info: $("show_info").checked,
+    dark_mode: $("dark_mode").checked,
+  };
+  try {
+    const payload = JSON.stringify(JSON.stringify(cfg));       // a python string literal
+    // Close the file before reading it back: an unclosed write may not reach flash.
+    const check = await runPython(
+      "import json\n" +
+      "f = open('config.json','w')\n" +
+      "f.write(" + payload + ")\n" +
+      "f.close()\n" +
+      "saved = json.load(open('config.json'))\n" +
+      "print('saved', saved.get('ssid'), saved.get('channel'))\n");
+    if (!check.startsWith("saved")) throw new Error("frame did not confirm the write: " + check);
+    log("Saved and verified on the frame: " + check.slice(6));
+    status("Saved", "ok");
+  } catch (err) {
+    log("Save failed: " + err.message);
+    status("Save failed", "bad");
+  }
+  setBusy(false);
+});
+
+$("draw").addEventListener("click", async () => {
+  setBusy(true);
+  status("Drawing — about 40 s");
+  log("Fetching a block and refreshing the panel ...");
+  try {
+    log(await runPython("import frame\nframe.run_once()\n"));
+    status("Drawn", "ok");
+  } catch (err) {
+    log("Draw failed: " + err.message);
+    status("Draw failed", "bad");
+  }
+  setBusy(false);
+});
+
+$("reset").addEventListener("click", async () => {
+  try {
+    await writer.write(enc.encode("\r\x03\x03"));
+    await runPython("import machine\nmachine.reset()\n").catch(() => {});
+    log("Board reset.");
+  } catch (err) { log("Reset: " + err.message); }
+});
+</script>
+</body>
+</html>
