@@ -5590,22 +5590,6 @@
   (property "Description" "" (at 243.84 226.06 0) (effects (font (size 1.27 1.27))) (hide yes))
   
   (instances (project "inky-esp32-carrier" (path "/55b3ea2b-612e-4a33-9791-ff6f3419debb" (reference "H2") (unit 1)))))
-(symbol (lib_id "Mechanical:MountingHole") (at 266.70 226.06 0) (unit 1) (exclude_from_sim no) (in_bom no) (on_board yes) (dnp no) (uuid "3c0bbfec-3327-4ed3-9605-d19dbc4b3613")
-  (property "Reference" "H3" (at 266.70 222.25 0) (effects (font (size 1.27 1.27))))
-  (property "Value" "MountingHole_M2.5" (at 266.70 229.87 0) (effects (font (size 1.27 1.27))))
-  (property "Footprint" "MountingHole:MountingHole_2.7mm_M2.5" (at 266.70 226.06 0) (effects (font (size 1.27 1.27))) (hide yes))
-  (property "Datasheet" "" (at 266.70 226.06 0) (effects (font (size 1.27 1.27))) (hide yes))
-  (property "Description" "" (at 266.70 226.06 0) (effects (font (size 1.27 1.27))) (hide yes))
-  
-  (instances (project "inky-esp32-carrier" (path "/55b3ea2b-612e-4a33-9791-ff6f3419debb" (reference "H3") (unit 1)))))
-(symbol (lib_id "Mechanical:MountingHole") (at 289.56 226.06 0) (unit 1) (exclude_from_sim no) (in_bom no) (on_board yes) (dnp no) (uuid "65bff634-d272-4455-96ba-863108e8d388")
-  (property "Reference" "H4" (at 289.56 222.25 0) (effects (font (size 1.27 1.27))))
-  (property "Value" "MountingHole_M2.5" (at 289.56 229.87 0) (effects (font (size 1.27 1.27))))
-  (property "Footprint" "MountingHole:MountingHole_2.7mm_M2.5" (at 289.56 226.06 0) (effects (font (size 1.27 1.27))) (hide yes))
-  (property "Datasheet" "" (at 289.56 226.06 0) (effects (font (size 1.27 1.27))) (hide yes))
-  (property "Description" "" (at 289.56 226.06 0) (effects (font (size 1.27 1.27))) (hide yes))
-  
-  (instances (project "inky-esp32-carrier" (path "/55b3ea2b-612e-4a33-9791-ff6f3419debb" (reference "H4") (unit 1)))))
 (sheet_instances (path "/" (page "1")))
 (embedded_fonts no)
 )
