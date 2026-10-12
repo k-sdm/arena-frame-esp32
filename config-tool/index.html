@@ -187,10 +187,21 @@ async function loadConfig() {
   setBusy(true);
   try {
     const out = await runPython(
-      "try:\n import json;print(json.dumps(json.load(open('config.json'))))\nexcept Exception as e:\n print('{}')\n");
+      "import json\n" +
+      "try:\n" +
+      "    c = json.load(open('config.json'))\n" +
+      "except Exception:\n" +
+      "    c = {}\n" +
+      "safe = {k: c.get(k) for k in ('ssid','channel','order','refresh_minutes','show_title','show_info','dark_mode')}\n" +
+      "safe['has_password'] = bool(c.get('password'))\n" +
+      "safe['has_token'] = bool(c.get('token'))\n" +
+      "print(json.dumps(safe))\n");
     const cfg = JSON.parse(out.trim().split("\n").pop() || "{}");
     for (const key of ["ssid", "channel", "order", "refresh_minutes"]) if (cfg[key] != null) $(key).value = cfg[key];
-    for (const key of ["show_title", "show_info", "dark_mode"]) $(key).checked = cfg[key] !== false;
+    for (const key of ["show_title", "show_info"]) $(key).checked = cfg[key] !== false;
+    $("dark_mode").checked = cfg.dark_mode === true;
+    $("password").placeholder = cfg.has_password ? "unchanged - type to replace" : "";
+    $("token").placeholder = cfg.has_token ? "unchanged - type to replace" : "optional";
     log(cfg.ssid ? "Loaded settings from the frame." : "No settings on the frame yet.");
     status("Connected", "ok");
   } catch (err) {
@@ -207,25 +218,32 @@ $("form").addEventListener("submit", async (event) => {
   setBusy(true);
   const cfg = {
     ssid: $("ssid").value.trim(),
-    password: $("password").value,
     channel: $("channel").value.trim(),
-    token: $("token").value.trim() || null,
     order: $("order").value,
     refresh_minutes: Number($("refresh_minutes").value) || 60,
     show_title: $("show_title").checked,
     show_info: $("show_info").checked,
     dark_mode: $("dark_mode").checked,
   };
+  // Blank means "leave as it is": the page never reads these back, so sending an
+  // empty string would wipe what is on the frame.
+  if ($("password").value) cfg.password = $("password").value;
+  if ($("token").value.trim()) cfg.token = $("token").value.trim();
   try {
     const payload = JSON.stringify(JSON.stringify(cfg));       // a python string literal
     // Close the file before reading it back: an unclosed write may not reach flash.
     const check = await runPython(
       "import json\n" +
+      "try:\n" +
+      "    cur = json.load(open('config.json'))\n" +
+      "except Exception:\n" +
+      "    cur = {}\n" +
+      "cur.update(json.loads(" + payload + "))\n" +
       "f = open('config.json','w')\n" +
-      "f.write(" + payload + ")\n" +
+      "f.write(json.dumps(cur))\n" +
       "f.close()\n" +
       "saved = json.load(open('config.json'))\n" +
-      "print('saved', saved.get('ssid'), saved.get('channel'))\n");
+      "print('saved', saved.get('ssid'), saved.get('channel'), 'wifi' if saved.get('password') else 'NO-PASSWORD')\n");
     if (!check.startsWith("saved")) throw new Error("frame did not confirm the write: " + check);
     log("Saved and verified on the frame: " + check.slice(6));
     status("Saved", "ok");

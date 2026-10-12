@@ -49,10 +49,12 @@ def fetch(url, proxy=True, w=CANVAS_W, h=1600):
 
 
 def decode(data):
-    """(rgb888 buffer, width, height) for JPEG bytes.
+    """(rgb888 buffer, width, height, decoder) for JPEG bytes.
 
-    decode() returns the frame; decode_into() only exists in newer builds than the
-    firmware here (jpeg 1.0.0), so use whichever this board has.
+    decode() hands back a memoryview of the decoder's own buffer, so the decoder is
+    returned too and must be kept referenced until the pixels have been used — if it
+    is collected, that memory is reused and the start of the image is overwritten.
+    decode_into() only exists in newer builds than the firmware here (jpeg 1.0.0).
     """
     import jpeg
     decoder = jpeg.Decoder(pixel_format="RGB888")
@@ -61,8 +63,8 @@ def decode(data):
     if hasattr(decoder, "decode_into"):
         buf = bytearray(w * h * 3)
         decoder.decode_into(data, buf)
-        return buf, w, h
-    return decoder.decode(data), w, h
+        return buf, w, h, decoder
+    return decoder.decode(data), w, h, decoder
 
 
 @micropython.viper
@@ -149,7 +151,7 @@ def render(url, proxy=True, dark=False, max_h=CANVAS_H):
     """
     data = fetch(url, proxy)
     gc.collect()
-    rgb, sw, sh = decode(data)
+    rgb, sw, sh, decoder = decode(data)      # keep `decoder` alive: rgb points into it
     del data
     gc.collect()
     frame = bytearray((b"\x00" if dark else b"\x11") * BUF_LEN)
@@ -162,6 +164,6 @@ def render(url, proxy=True, dark=False, max_h=CANVAS_H):
     stride = (dw + 3) * 3
     err = bytearray(stride * 2 * 4)
     _dither(rgb, sw, sh, frame, dw, dh, px0, 0, err, stride, PALETTE, CODES)
-    del rgb, err
+    del rgb, err, decoder
     gc.collect()
     return frame, dh
