@@ -3,3 +3,6 @@ firmware/*.zip
 firmware/*.bin
 __pycache__/
 .DS_Store
+*.lck
+~*.kicad_*
+kicad-backups/

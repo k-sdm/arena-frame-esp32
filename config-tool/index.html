@@ -213,6 +213,16 @@ async function loadConfig() {
 
 $("load").addEventListener("click", loadConfig);
 
+/* Connecting over serial interrupts the frame's loop, so restart it when we are done. */
+async function resetBoard() {
+  await writer.write(enc.encode("\r\x03\x03"));
+  try {
+    await runPython("import machine\nmachine.reset()\n");
+  } catch (err) {
+    /* the board resets mid-reply, so a missing prompt here is expected */
+  }
+}
+
 $("form").addEventListener("submit", async (event) => {
   event.preventDefault();
   setBusy(true);
@@ -246,7 +256,9 @@ $("form").addEventListener("submit", async (event) => {
       "print('saved', saved.get('ssid'), saved.get('channel'), 'wifi' if saved.get('password') else 'NO-PASSWORD')\n");
     if (!check.startsWith("saved")) throw new Error("frame did not confirm the write: " + check);
     log("Saved and verified on the frame: " + check.slice(6));
-    status("Saved", "ok");
+    await resetBoard();
+    log("Frame restarted - it will draw with the new settings.");
+    status("Saved - frame restarted", "ok");
   } catch (err) {
     log("Save failed: " + err.message);
     status("Save failed", "bad");
@@ -260,7 +272,8 @@ $("draw").addEventListener("click", async () => {
   log("Fetching a block and refreshing the panel ...");
   try {
     log(await runPython("import frame\nframe.run_once()\n"));
-    status("Drawn", "ok");
+    await resetBoard();
+    status("Drawn - frame restarted", "ok");
   } catch (err) {
     log("Draw failed: " + err.message);
     status("Draw failed", "bad");
@@ -270,9 +283,8 @@ $("draw").addEventListener("click", async () => {
 
 $("reset").addEventListener("click", async () => {
   try {
-    await writer.write(enc.encode("\r\x03\x03"));
-    await runPython("import machine\nmachine.reset()\n").catch(() => {});
-    log("Board reset.");
+    await resetBoard();
+    log("Board reset - the frame is running again.");
   } catch (err) { log("Reset: " + err.message); }
 });
 </script>
