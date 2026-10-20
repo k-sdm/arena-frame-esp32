@@ -45,6 +45,7 @@
   pre { background:var(--faint); border:0; padding:10px; font-family:var(--mono); font-size:11px;
         max-height:200px; overflow:auto; margin:0; white-space:pre-wrap; color:var(--fg); }
   .hint { font-size:12px; color:var(--muted); margin:10px 0 0; }
+  .hint strong { color:var(--fg); font-weight:700; }
   fieldset.toggles { border:1px solid var(--line); border-radius:0; padding:12px 14px; margin:0 0 14px; }
   fieldset.toggles legend { font-size:10px; text-transform:uppercase; letter-spacing:.09em;
                             color:var(--muted); padding:0 5px; }
@@ -67,7 +68,10 @@
       <button id="load" class="ghost" disabled>Read from frame</button>
       <span id="status" class="status">Not connected</span>
     </div>
-    <p class="hint" id="unsupported" hidden>This browser has no Web Serial support. Use Chrome or Edge on desktop.</p>
+    <p class="hint"><strong>Chrome or Edge on desktop only.</strong> Safari and Firefox cannot talk to
+    serial devices. When you press Connect, pick the <strong>Espressif</strong> device from the list
+    your browser shows — it may be named "USB JTAG/serial debug unit" or "USB Single Serial".</p>
+    <p class="hint" id="unsupported" hidden>This browser has no Web Serial support. Open this page in Chrome or Edge on a desktop.</p>
   </div>
 
   <form class="card" id="form">
