@@ -1,0 +1,93 @@
+#!/bin/bash
+# Provision an Arena Frame board from scratch: firmware, code, fonts, boot launcher.
+#
+#   ./provision                 flash firmware, then deploy the code
+#   ./provision --code-only     deploy the code only (keeps config.json and state.json)
+#   PORT=/dev/cu.usbmodem1101 ./provision     pick the board explicitly
+#
+# Flashing erases the whole chip, so WiFi and channel settings go with it; set them
+# again from config-tool/index.html afterwards.
+set -euo pipefail
+
+HERE="$(cd "$(dirname "$0")" && pwd)"
+FIRMWARE="$HERE/firmware/firmware.bin"
+FIRMWARE_URL="https://github.com/cnadler86/mp_jpeg/releases/download/v0.4.0/firmware-ESP32_GENERIC_S3-SPIRAM_OCT.zip"
+CODE_ONLY=0
+[ "${1:-}" = "--code-only" ] && CODE_ONLY=1
+
+say() { printf "\n== %s\n" "$1"; }
+
+# --- tools -----------------------------------------------------------------
+if [ ! -x "$HERE/venv/bin/python" ]; then
+    say "Creating the tool environment (esptool, mpremote)"
+    python3 -m venv "$HERE/venv"
+    "$HERE/venv/bin/pip" install -q --disable-pip-version-check esptool mpremote
+fi
+PY="$HERE/venv/bin/python"
+MPR="$HERE/venv/bin/mpremote"
+
+# --- board -----------------------------------------------------------------
+PORT="${PORT:-$(ls /dev/cu.usbmodem* 2>/dev/null | head -1)}"
+if [ -z "$PORT" ]; then
+    echo "No board found. Plug it in over USB." >&2
+    echo "If it only shows a UART port, use that one: PORT=/dev/cu.usbserial-... $0" >&2
+    exit 1
+fi
+echo "Board on $PORT"
+
+wait_for_board() {
+    for _ in $(seq 1 25); do
+        if "$MPR" connect "$PORT" exec "pass" >/dev/null 2>&1; then return 0; fi
+        PORT="${PORT_OVERRIDE:-$(ls /dev/cu.usbmodem* 2>/dev/null | head -1)}"   # it may re-enumerate
+        sleep 1
+    done
+    echo "The board never came back after resetting." >&2
+    exit 1
+}
+
+# --- firmware --------------------------------------------------------------
+if [ "$CODE_ONLY" = "0" ]; then
+    if [ ! -f "$FIRMWARE" ]; then
+        say "Downloading MicroPython with the JPEG decoder"
+        mkdir -p "$HERE/firmware"
+        curl -fsSL -o "$HERE/firmware/firmware.zip" "$FIRMWARE_URL"
+        unzip -o -q -d "$HERE/firmware" "$HERE/firmware/firmware.zip"
+    fi
+    say "Checking the chip"
+    "$PY" -m esptool --chip esp32s3 --port "$PORT" flash_id | grep -E "Chip is|flash size|MAC" || true
+    say "Erasing (this wipes any settings on the board)"
+    "$PY" -m esptool --chip esp32s3 --port "$PORT" erase_flash | tail -2
+    say "Writing firmware"
+    "$PY" -m esptool --chip esp32s3 --port "$PORT" --baud 460800 write_flash 0 "$FIRMWARE" | tail -3
+    wait_for_board
+fi
+
+# --- code ------------------------------------------------------------------
+say "Deploying the frame code"
+cd "$HERE/device"
+"$MPR" connect "$PORT" fs mkdir fonts >/dev/null 2>&1 || true
+"$MPR" connect "$PORT" fs cp inky.py wifi.py arena.py render.py image.py font.py :
+"$MPR" connect "$PORT" fs cp fonts/areal_b26.bin fonts/areal_r20.bin fonts/areal_r14.bin :fonts/
+"$MPR" connect "$PORT" fs cp main.py :frame.py
+"$MPR" connect "$PORT" fs cp main_boot.py :main.py          # runs on power-up
+
+# --- check -----------------------------------------------------------------
+say "Checking the board"
+"$MPR" connect "$PORT" exec "
+import gc, os, sys, jpeg
+need = ('inky.py','wifi.py','arena.py','render.py','image.py','font.py','frame.py','main.py')
+have = os.listdir()
+missing = [f for f in need if f not in have]
+print('firmware :', sys.implementation._build)
+print('jpeg     :', jpeg.version(), '| free heap:', gc.mem_free())
+print('fonts    :', os.listdir('fonts'))
+print('missing  :', missing or 'nothing')
+print('config   :', 'set' if 'config.json' in have else 'not set yet')
+"
+
+cat <<'NEXT'
+
+== Done
+Set WiFi and the channel in config-tool/index.html (Chrome or Edge), then press
+Save to frame — it restarts the board and the frame starts drawing on its own.
+NEXT

@@ -37,6 +37,15 @@ and draws the block title and channel line beneath.
 MISO is unused. Avoid GPIO 26-37 (flash and octal PSRAM), 0/3/45/46 (strapping),
 19/20 (USB), 43/44 (UART) and 38 (RGB LED).
 
+## Provisioning a fresh board
+
+    ./provision              # firmware, code, fonts, boot launcher
+    ./provision --code-only  # push code changes, keeping settings
+
+It fetches the tools and firmware on first run, erases and flashes the chip, copies
+everything across and checks what landed. Then set WiFi and the channel from
+`config-tool/index.html`. Pass `PORT=/dev/cu.usbmodem...` to choose a board.
+
 ## Firmware
 
 MicroPython with a JPEG decoder: the prebuilt
