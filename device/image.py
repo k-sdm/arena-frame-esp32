@@ -149,7 +149,17 @@ def render(url, proxy=True, dark=False, max_h=CANVAS_H):
 
     Returns (canvas, image height) so the caption can sit directly under it.
     """
-    data = fetch(url, proxy)
+    return compose(fetch(url, proxy), dark, max_h)
+
+
+def render_file(path, dark=False, max_h=CANVAS_H):
+    """Same, for a JPEG already on the board (the welcome card)."""
+    with open(path, "rb") as f:
+        return compose(f.read(), dark, max_h)
+
+
+def compose(data, dark=False, max_h=CANVAS_H):
+    """JPEG bytes -> (portrait canvas, image height)."""
     gc.collect()
     rgb, sw, sh, decoder = decode(data)      # keep `decoder` alive: rgb points into it
     del data

@@ -70,6 +70,7 @@ cd "$HERE/device"
 "$MPR" connect "$PORT" fs cp fonts/areal_b26.bin fonts/areal_r20.bin fonts/areal_r14.bin :fonts/
 "$MPR" connect "$PORT" fs cp main.py :frame.py
 "$MPR" connect "$PORT" fs cp main_boot.py :main.py          # runs on power-up
+"$MPR" connect "$PORT" fs cp welcome.jpg :                  # shown by the test below
 
 # --- check -----------------------------------------------------------------
 say "Checking the board"
@@ -83,6 +84,16 @@ print('jpeg     :', jpeg.version(), '| free heap:', gc.mem_free())
 print('fonts    :', os.listdir('fonts'))
 print('missing  :', missing or 'nothing')
 print('config   :', 'set' if 'config.json' in have else 'not set yet')
+"
+
+say "Drawing the welcome card (about 35 s)"
+"$MPR" connect "$PORT" exec "
+import time, image, render
+from inky import Inky
+t = time.ticks_ms()
+buf, h = image.render_file('welcome.jpg')
+print('decoded and dithered in', time.ticks_diff(time.ticks_ms(), t), 'ms')
+print('refresh', Inky().show(render.to_native(buf)), 'ms')
 "
 
 cat <<'NEXT'
