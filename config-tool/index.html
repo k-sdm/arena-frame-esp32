@@ -84,6 +84,16 @@
       <input id="password" name="password" type="password" autocomplete="off">
     </div>
     <div class="field">
+      <label for="panel">Display</label>
+      <select id="panel" name="panel">
+        <option value="7.3">Inky Impression 7.3" - 800 x 480</option>
+        <option value="4.0">Inky Impression 4" - 600 x 400</option>
+        <option value="13.3">Inky Impression 13.3" - 1600 x 1200 (untested)</option>
+      </select>
+      <p class="hint">The 13.3" has two controllers and needs a second chip-select wire;
+      the current board has one.</p>
+    </div>
+    <div class="field">
       <label for="channel">Are.na channel slug</label>
       <input id="channel" name="channel" autocomplete="off" placeholder="my-channel">
     </div>
@@ -196,12 +206,12 @@ async function loadConfig() {
       "    c = json.load(open('config.json'))\n" +
       "except Exception:\n" +
       "    c = {}\n" +
-      "safe = {k: c.get(k) for k in ('ssid','channel','order','refresh_minutes','show_title','show_info','dark_mode')}\n" +
+      "safe = {k: c.get(k) for k in ('ssid','channel','order','refresh_minutes','show_title','show_info','dark_mode','panel')}\n" +
       "safe['has_password'] = bool(c.get('password'))\n" +
       "safe['has_token'] = bool(c.get('token'))\n" +
       "print(json.dumps(safe))\n");
     const cfg = JSON.parse(out.trim().split("\n").pop() || "{}");
-    for (const key of ["ssid", "channel", "order", "refresh_minutes"]) if (cfg[key] != null) $(key).value = cfg[key];
+    for (const key of ["ssid", "channel", "order", "refresh_minutes", "panel"]) if (cfg[key] != null) $(key).value = cfg[key];
     for (const key of ["show_title", "show_info"]) $(key).checked = cfg[key] !== false;
     $("dark_mode").checked = cfg.dark_mode === true;
     $("password").placeholder = cfg.has_password ? "unchanged - type to replace" : "";
@@ -234,6 +244,7 @@ $("form").addEventListener("submit", async (event) => {
     ssid: $("ssid").value.trim(),
     channel: $("channel").value.trim(),
     order: $("order").value,
+    panel: $("panel").value,
     refresh_minutes: Number($("refresh_minutes").value) || 60,
     show_title: $("show_title").checked,
     show_info: $("show_info").checked,

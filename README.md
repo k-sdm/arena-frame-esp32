@@ -22,6 +22,22 @@ and draws the block title and channel line beneath.
     mpr            mpremote wrapper, finds the board automatically
     flash           esptool wrapper for firmware
 
+## Panels
+
+Chosen in the setup page, stored as `panel` in config.json:
+
+| Setting | Panel | Pixels | Controller | State |
+|---|---|---|---|---|
+| `7.3` | Inky Impression 7.3" | 800 x 480 | EL673 | tested |
+| `4.0` | Inky Impression 4" | 600 x 400 | E640 | same command set, untested |
+| `13.3` | Inky Impression 13.3" | 1600 x 1200 | EL133UF1 | untested, needs a second chip-select |
+
+The 4" differs from the 7.3" only in the resolution bytes and one pre-refresh value.
+The 13.3" is a different controller: two of them, each driving 600 of the 1200 columns,
+at 10 MHz with a refresh around 65 s. It needs a second CS line (Pi header pins 37 and
+36, BCM 26 and 16) — the carrier board wires one CS, so that panel needs a board revision.
+A later revision is to read the panel's EEPROM and pick the size itself.
+
 ## Wiring
 
 | Inky header pin | Signal | ESP32-S3 |

@@ -12,9 +12,8 @@ going muddy. Index order matches theirs, remapped to the panel's RAM codes.
 import gc
 import requests
 
-from inky import W, H, BUF_LEN
+import render
 
-CANVAS_W, CANVAS_H = H, W          # portrait: 480 x 800
 PROXY = "https://wsrv.nl/?url=%s&w=%d&h=%d&fit=inside&output=jpg&q=85"
 
 #        black        white           yellow         red           blue          green
@@ -32,13 +31,13 @@ def _quote(url):
     return "".join(out)
 
 
-def fetch(url, proxy=True, w=CANVAS_W, h=1600):
+def fetch(url, proxy=True, w=0, h=0):
     """Image bytes, scaled to the canvas width by the proxy when enabled.
 
     The proxy also converts PNG (most Are.na blocks) to JPEG, which the decoder needs.
     """
     if proxy:
-        url = PROXY % (_quote(url), w, h)
+        url = PROXY % (_quote(url), w or render.CANVAS_W, h or render.CANVAS_H * 2)
     r = requests.get(url)
     try:
         if r.status_code != 200:
@@ -69,7 +68,7 @@ def decode(data):
 
 @micropython.viper
 def _dither(src: ptr8, sw: int, sh: int, dst: ptr8, dw: int, dh: int,
-            px0: int, py0: int, err: ptr32, stride: int, pal: ptr8, codes: ptr8):
+            px0: int, py0: int, err: ptr32, stride: int, pal: ptr8, codes: ptr8, prow: int):
     """Scale, Floyd-Steinberg dither to the six inks, rotate and pack, in one pass.
 
     Errors are carried at 1/256 so the integer maths doesn't lose them.
@@ -82,7 +81,7 @@ def _dither(src: ptr8, sw: int, sh: int, dst: ptr8, dw: int, dh: int,
             err[nxt + i] = 0
             i += 1
         row = ((y * sh) // dh) * sw * 3
-        prow = (py0 + y) * 240          # portrait canvas: 480 px wide, 2 px per byte
+        orow = (py0 + y) * prow         # portrait canvas, 2 px per byte
         for x in range(dw):
             si = row + ((x * sw) // dw) * 3
             idx = cur + (x + 1) * 3
@@ -136,7 +135,7 @@ def _dither(src: ptr8, sw: int, sh: int, dst: ptr8, dw: int, dh: int,
             err[n + 2] = err[n + 2] + (eb >> 4)
             code = int(codes[best])
             px = px0 + x
-            off = prow + (px >> 1)
+            off = orow + (px >> 1)
             v = int(dst[off])
             if px & 1:
                 dst[off] = (v & 0xF0) | code
@@ -144,7 +143,7 @@ def _dither(src: ptr8, sw: int, sh: int, dst: ptr8, dw: int, dh: int,
                 dst[off] = (v & 0x0F) | (code << 4)
 
 
-def render(url, proxy=True, dark=False, max_h=CANVAS_H):
+def render(url, proxy=True, dark=False, max_h=0):
     """Fetch an image onto a portrait canvas: full width, top-aligned.
 
     Returns (canvas, image height) so the caption can sit directly under it.
@@ -152,28 +151,29 @@ def render(url, proxy=True, dark=False, max_h=CANVAS_H):
     return compose(fetch(url, proxy), dark, max_h)
 
 
-def render_file(path, dark=False, max_h=CANVAS_H):
+def render_file(path, dark=False, max_h=0):
     """Same, for a JPEG already on the board (the welcome card)."""
     with open(path, "rb") as f:
         return compose(f.read(), dark, max_h)
 
 
-def compose(data, dark=False, max_h=CANVAS_H):
+def compose(data, dark=False, max_h=0):
     """JPEG bytes -> (portrait canvas, image height)."""
+    max_h = max_h or render.CANVAS_H
     gc.collect()
     rgb, sw, sh, decoder = decode(data)      # keep `decoder` alive: rgb points into it
     del data
     gc.collect()
-    frame = bytearray((b"\x00" if dark else b"\x11") * BUF_LEN)
-    dw = CANVAS_W                                   # fill the width
+    frame = bytearray((b"\x00" if dark else b"\x11") * render.FRAME)
+    dw = render.CANVAS_W                            # fill the width
     dh = sh * dw // sw                              # height follows the aspect ratio
     if dh > max_h:                                  # too tall: height drives the fit instead
         dh = max_h
         dw = sw * dh // sh
-    px0 = (CANVAS_W - dw) // 2                      # centred when narrower than the canvas
+    px0 = (render.CANVAS_W - dw) // 2                # centred when narrower than the canvas
     stride = (dw + 3) * 3
     err = bytearray(stride * 2 * 4)
-    _dither(rgb, sw, sh, frame, dw, dh, px0, 0, err, stride, PALETTE, CODES)
+    _dither(rgb, sw, sh, frame, dw, dh, px0, 0, err, stride, PALETTE, CODES, render.ROW)
     del rgb, err, decoder
     gc.collect()
     return frame, dh

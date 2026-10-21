@@ -8,10 +8,15 @@ first — the panel's own layout — so no pixel conversion is needed, only the 
 import framebuf
 
 import font
-from inky import W, H, BUF_LEN, BLACK, WHITE
+import inky
+from inky import BLACK, WHITE
 
-CANVAS_W, CANVAS_H = H, W          # 480 x 800
-ROW = CANVAS_W // 2                # bytes per portrait row
+# Set by configure(); defaults to the 7.3" panel.
+PANEL = inky.DEFAULT_PANEL
+PANEL_W, PANEL_H = inky.panel_size(PANEL)
+CANVAS_W, CANVAS_H = PANEL_H, PANEL_W     # portrait: the panel turned on its side
+ROW = CANVAS_W // 2                       # bytes per portrait row
+FRAME = PANEL_W * PANEL_H // 2
 PAD = 24
 LINE_GAP = 6
 TITLE_GAP = 16
@@ -19,8 +24,19 @@ EDGE = 10          # channel line: padding from the left and bottom
 CHANNEL_LINES = 2
 
 
+def configure(panel=inky.DEFAULT_PANEL):
+    """Point the renderer at a panel size. Call before drawing anything."""
+    global PANEL, PANEL_W, PANEL_H, CANVAS_W, CANVAS_H, ROW, FRAME
+    PANEL = panel
+    PANEL_W, PANEL_H = inky.panel_size(panel)
+    CANVAS_W, CANVAS_H = PANEL_H, PANEL_W
+    ROW = CANVAS_W // 2
+    FRAME = PANEL_W * PANEL_H // 2
+    return CANVAS_W, CANVAS_H
+
+
 def new_canvas(dark=False):
-    buf = bytearray(BUF_LEN)
+    buf = bytearray(FRAME)
     fb = framebuf.FrameBuffer(buf, CANVAS_W, CANVAS_H, framebuf.GS4_HMSB)
     fb.fill(BLACK if dark else WHITE)
     return buf, fb
@@ -166,19 +182,20 @@ def canvas_from(buf):
 
 
 @micropython.viper
-def _rotate(src: ptr8, dst: ptr8):
-    """Portrait 480x800 -> native 800x480: native (nx, ny) = (py, 479 - px)."""
-    for py in range(800):
-        srow = py * 240
+def _rotate(src: ptr8, dst: ptr8, cw: int, ch: int, prow: int, nrow: int):
+    """Portrait (cw x ch) -> native: native (nx, ny) = (py, cw - 1 - px)."""
+    last = cw - 1
+    for py in range(ch):
+        srow = py * prow
         half = py >> 1
         odd = py & 1
-        for px in range(480):
+        for px in range(cw):
             b = int(src[srow + (px >> 1)])
             if px & 1:
                 code = b & 0x0F
             else:
                 code = b >> 4
-            off = (479 - px) * 400 + half
+            off = (last - px) * nrow + half
             v = int(dst[off])
             if odd:
                 dst[off] = (v & 0xF0) | code
@@ -187,7 +204,13 @@ def _rotate(src: ptr8, dst: ptr8):
 
 
 def to_native(portrait):
-    """Rotate a portrait canvas into a frame the panel can take."""
-    frame = bytearray(BUF_LEN)
-    _rotate(portrait, frame)
+    """Rotate a portrait canvas into a frame the panel can take.
+
+    The 13.3" panel's two controllers are fed in the canvas's own order, so that one
+    is passed straight through.
+    """
+    if PANEL == "13.3":
+        return portrait
+    frame = bytearray(FRAME)
+    _rotate(portrait, frame, CANVAS_W, CANVAS_H, ROW, PANEL_W // 2)
     return frame

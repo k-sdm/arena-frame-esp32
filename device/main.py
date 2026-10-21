@@ -13,9 +13,9 @@ import random
 import time
 
 import arena
+import inky
 import render
 import wifi
-from inky import Inky
 
 CONFIG = "config.json"
 STATE = "state.json"
@@ -81,7 +81,9 @@ def show_block(display, block, info, cfg):
 
 def run_once():
     cfg = load(CONFIG)
-    display = Inky()
+    panel = cfg.get("panel", inky.DEFAULT_PANEL)
+    render.configure(panel)
+    display = inky.get(panel)
     if not cfg.get("ssid") or not cfg.get("channel"):
         buf, _ = render.message("Add wifi and channel in the setup page")
         display.show(render.to_native(buf))
